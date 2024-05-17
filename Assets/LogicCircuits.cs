@@ -17,14 +17,16 @@ public class LogicCircuits : MonoBehaviour {
     public TextMesh[] InputTexts;
     public TextMesh OutputText;
     public GameObject diagramImage;
+    public GameObject CircuitBacklight;
 
-    bool[] Inputs = new bool[3];
+    private bool[] Inputs = new bool[3];
     bool Result;
     public string Diagram;
 
     static int ModuleIdCounter = 1;
     int ModuleId;
-    private bool ModuleSolved;
+    private bool ModuleSolved = false;
+    private bool ModuleActivated = false;
 
     void Awake () {
         ModuleId = ModuleIdCounter++;
@@ -34,7 +36,7 @@ public class LogicCircuits : MonoBehaviour {
         {
             button.OnInteract += delegate () { ButtonPress(button); return false; };
         }
-
+        
         for (int i = 0; i < Inputs.Length; i++)
         {
             InputTexts[i].color = new Color(0, 0, 0);
@@ -48,33 +50,35 @@ public class LogicCircuits : MonoBehaviour {
             }
         }
         OutputText.color = new Color(0, 0, 0);
-
         diagramImage.SetActive(false);
 
+        bool flipDiagram = false;
         // RNG to invert diagram vertically
         if (Rnd.Range(0, 2) == 0)
         {
             var colorA = InputTexts[0].color;
             var colorC = InputTexts[2].color;
+            InputTexts[0].color = colorC;
+            InputTexts[2].color = colorA;
             bool temp = Inputs[0];
             Inputs[0] = Inputs[2];
             Inputs[2] = temp;
-            InputTexts[0].color = colorC;
-            InputTexts[2].color = colorA;
 
             // flip diagramImage y
             var scale = diagramImage.transform.localScale;
             scale.y *= -1;
             diagramImage.transform.localScale = scale;
-
+            flipDiagram = true;
         }
+        
+        Debug.Log(Inputs[0] + " " + Inputs[1] + " " + Inputs[2]);
 
         LogicCircuit logicCircuit = new LogicCircuit();
+        Diagram = logicCircuit.Circuit(Inputs, flipDiagram);
 
-        Diagram = logicCircuit.Circuit(Inputs[0], Inputs[1], Inputs[2]);
-        Debug.Log(Inputs[0] + " " + Inputs[1] + " " + Inputs[2]);
-        Debug.Log(Diagram);
         Result = Diagram[Diagram.Length - 1] == 'T';
+
+        Debug.Log(Diagram);
     }
 
     void ButtonPress(KMSelectable button)
@@ -87,48 +91,95 @@ public class LogicCircuits : MonoBehaviour {
         }
         for (int i = 0; i < Buttons.Length; i++)
         {
-            if (button == Buttons[i])
+            if (button != Buttons[i])
             {
-                if ((i == 0 && !Result) || (i == 1 && Result))
-                {
-                    ModuleSolved = true;
-                    Solve();
-                }
-                else
-                {
-                    Strike();
-                }
+                continue;
             }
+            if ((i == 0 && !Result) || (i == 1 && Result))
+            {
+                ModuleSolved = true;
+                Solve();
+                return;
+            }
+            Strike();
         }
     }
 
-    void OnDestroy () {
-      
+    IEnumerator Blink()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            diagramImage.SetActive(false);
+            for (int j = 0; j < InputTexts.Length; j++)
+            {
+                InputTexts[j].color = new Color(0, 0, 0);
+            }
+            OutputText.color = new Color(0, 0, 0);
+
+            if (i == 2)
+            {
+                // change CircuitBacklight color to black
+                CircuitBacklight.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0);
+                break;
+            }
+
+            yield return new WaitForSeconds(0.5f);
+
+            diagramImage.SetActive(true);
+            for (int j = 0; j < InputTexts.Length; j++)
+            {
+                if (Inputs[j])
+                {
+                    InputTexts[j].color = new Color(1, 1, 1);
+                }
+            }
+            OutputText.color = new Color(0.4f, 1, 0.4f);
+
+            yield return new WaitForSeconds(0.5f);
+        }
     }
 
     void Activate () {
-        for (int i = 0; i < Inputs.Length; i++) // "liga" as luzes dos textos
+        for (int i = 0; i < Inputs.Length; i++) // change True inputs to white
         {
             if (Inputs[i])
             {
                 InputTexts[i].color = new Color(1, 1, 1);
+            } else
+            {
+                InputTexts[i].color = new Color(0, 0, 0);
             }
         }
         OutputText.color = new Color(1, 1, 1);
-
         diagramImage.SetActive(true);
+        ModuleActivated = true;
     }
 
-    void Start () {
-
-    }
-
-    void Update () { 
-
+    void Update()
+    {
+        if (ModuleSolved || !ModuleActivated)
+        {
+            return;
+        }
+        for (int i = 0; i < Inputs.Length; i++)
+        {
+            if (!Inputs[i])
+            {
+                continue;
+            }
+            var color = InputTexts[i].color;
+            float pingPongValue = Mathf.PingPong(Time.time * 0.2f, 0.2f) + 0.8f;
+            color.r = pingPongValue;
+            color.g = pingPongValue;
+            color.b = pingPongValue;
+            InputTexts[i].color = color;
+            OutputText.color = color;
+        }
     }
 
     void Solve () {
         GetComponent<KMBombModule>().HandlePass();
+        StartCoroutine(Blink());
     }
 
     void Strike () {

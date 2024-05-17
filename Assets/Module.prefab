@@ -2305,6 +2305,7 @@ MonoBehaviour:
   - {fileID: 102295923727223632}
   OutputText: {fileID: 102091169160883104}
   diagramImage: {fileID: 1674005515799042}
+  CircuitBacklight: {fileID: 1609542582346048}
   Diagram: 
 --- !u!114 &114147416639194702
 MonoBehaviour:

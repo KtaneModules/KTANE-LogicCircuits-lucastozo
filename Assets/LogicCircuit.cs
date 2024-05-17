@@ -64,10 +64,15 @@ public class LogicCircuit
         return gates[select];
     }
 
-    public string Circuit(bool input1, bool input2, bool input3)
+    public string Circuit(bool[] input, bool flipDiagram)
     {
         string circuitString = "";
-        bool[] inputs = { input1, input2, input3 };
+
+        bool[] inputs = new bool[input.Length];
+        for (int i = 0; i < input.Length; i++)
+        {
+            inputs[i] = input[i];
+        }
 
         // Step 1
         for (int i = 0; i < inputs.Length; i++)
@@ -75,26 +80,52 @@ public class LogicCircuit
             inputs[i] = ApplyNotWithProbability(inputs[i], 0.35);
             if (notApplied)
             {
-                circuitString += "NOT" + (i+1) + ",";
+                if (flipDiagram) // 1 -> 3, 3 -> 1
+                {
+                    circuitString += "NOT" + (3-i) + ",";
+                }
+                else
+                {
+                    circuitString += "NOT" + (i+1) + ",";
+                }
+                notApplied = false;
             }
         }
 
+        circuitString += "CurrentInputs: " + (inputs[0] ? "T" : "F") + (inputs[1] ? "T" : "F") + (inputs[2] ? "T" : "F") + ",";
+
         // Step 2
-        int selectedInput = random.Next(2);
-        int selectedNeighborInput = (selectedInput + 1) % 3; // always two neighbors
-        int[] selectedInputs = { selectedInput, selectedNeighborInput };
+        int selectedInput = 0;
+        if (flipDiagram)
+        {
+            selectedInput = 1; // B + C inputs
+        }
+        int[] selectedInputs = { selectedInput, selectedInput+1 };
         Func<bool, bool, bool> logicGate = SelectLogicGate();
         bool logicGateOutput = logicGate(inputs[selectedInputs[0]], inputs[selectedInputs[1]]);
-        logicGateOutput = ApplyNotWithProbability(logicGateOutput, 0.4);
 
         circuitString += gateUsed + ",";
+        if (logicGateOutput)
+        {
+            circuitString += "OutputT,";
+        }
+        else
+        {
+            circuitString += "OutputF,";
+        }
+
+        logicGateOutput = ApplyNotWithProbability(logicGateOutput, 0.4);
         if (notApplied)
         {
             circuitString += "OutputNOT1,";
         }
 
         // Step 3
-        int remainingInput = 3 - selectedInputs[0] - selectedInputs[1];
+        int remainingInput = 2;
+        if (flipDiagram)
+        {
+            remainingInput = 0; // A input
+        }
         inputs[remainingInput] = ApplyNotWithProbability(inputs[remainingInput], 0.3);
         if (notApplied)
         {
@@ -105,6 +136,14 @@ public class LogicCircuit
         logicGate = SelectLogicGate();
         bool finalOutput = logicGate(logicGateOutput, inputs[remainingInput]);
         circuitString += gateUsed + ",";
+        if (finalOutput)
+        {
+            circuitString += "OutputT,";
+        }
+        else
+        {
+            circuitString += "OutputF,";
+        }
 
         // Step 5
         finalOutput = ApplyNotWithProbability(finalOutput, 0.5);
