@@ -187,14 +187,24 @@ public class LogicCircuits : MonoBehaviour {
     }
 
     #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"Use !{0} to do something.";
+    private readonly string TwitchHelpMessage = @"!{0} T/True/F/False [Presses the specified button]";
     #pragma warning restore 414
 
     IEnumerator ProcessTwitchCommand (string Command) {
-        yield return null;
+        if (Command.ToLowerInvariant().EqualsAny("t", "true"))
+        {
+            yield return null;
+            Buttons[1].OnInteract();
+        }
+        else if (Command.ToLowerInvariant().EqualsAny("f", "false"))
+        {
+            yield return null;
+            Buttons[0].OnInteract();
+        }
     }
 
     IEnumerator TwitchHandleForcedSolve () {
-        yield return null;
+        Buttons[!Result ? 0 : 1].OnInteract();
+        yield return new WaitForSeconds(.1f);
     }
 }
